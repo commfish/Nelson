@@ -5,8 +5,6 @@
 
 # load ----
 library(tidyverse)  
-#library(FNGr)
-#theme_set(theme_sleek())
 library(fpp2)
 library(RDS)
 library(ggrepel)
@@ -22,7 +20,7 @@ set.seed(100) # for reproducible results
 # data ----
 data <- read_csv('data/nelson.csv') %>%
   filter(year > 2002) #%>%
-#mutate(ln_oage_3 = log(oage_3))
+
 data[!complete.cases(data),]
 tail(data,13)
 
@@ -36,9 +34,9 @@ d_spawn[!complete.cases(d_spawn),]
 
 tail(d_spawn)
 # check this particularly that this_yr-2 is capturing the right data point once all the data is entered
-new_data <- d_spawn %>%
+(new_data <- d_spawn %>%
   filter(year == last_yr-1) %>%
-  select(spawnerstm4)
+  select(spawnerstm4))
 d_spawn <- d_spawn[complete.cases(d_spawn),] 
 
 #more processing data long
@@ -111,11 +109,6 @@ length(even)
 
 # analysis ----
 
-#mape <- function(actual, predicted){ # this is now done using library(Metrics).
-#  mean(abs((actual - predicted)/actual))
-#}
-#mae(actual, predicted)
-
 my_exp_summary <- function (data, lev = NULL, model = NULL) {
   c(RMSE = sqrt(mean((expm1(data$obs) - expm1(data$pred)^2))),
     Rsquared = summary(lm(pred ~ obs, data))$r.squared,
@@ -141,13 +134,11 @@ dev.off()
 layout(matrix(c(1,2,3,4),2,2)) # optional 4 graphs/page
 plot(lm2s) # check for normality
 
-(pred3 <- predict(lm2s, newdata = new_data))
-
 newpoint <- broom::augment(lm2s, newdata = new_data)
-(pred <- predict(lm2s, newdata = new_data, interval = "prediction", level = 0.90))
+(pred <- predict(lm2s, newdata = new_data, interval = "prediction", level = 0.80))
 lwr <- pred[2] # needed for ggplot
 upr <- pred[3]
-predict(lm2s, newdata = new_data, interval = "confidence", level = 0.90)
+predict(lm2s, newdata = new_data, interval = "prediction", level = 0.80)
 
 #Use to make 95% CI and PI 
 minspawnerstm4 <- min(data$spawnerstm4, na.rm = TRUE)
@@ -175,9 +166,9 @@ g.pred <- ggplot(pred.int, aes(x = spawnerstm4, y = fit)) +
   ylab("ocean age 2") #+ #ggtitle("oage_2 vs spawnerstm4")
 g.pred  
 dev.off()
-ggsave(filename = paste0("figures/oage_2_spawnerstm4_2003up", ".png", sep = ""), device = png(), width = 7, height = 9, units = "in", dpi = 300)
+ggsave(filename = paste0("figures/oage_2_spawnerstm4_all", ".png", sep = ""), device = png(), width = 7, height = 9, units = "in", dpi = 300)
 
-#Repeated K- fold Cross validation
+#Repeated K- fold Cross validation ----
 
 #check missing values There should be some for the older ages since those fish haven't returned yet
 d_spawn[!complete.cases(d_spawn),]
@@ -191,8 +182,6 @@ data_cv[!complete.cases(data_cv),]
 #data <- data_cv
 # define training control use one fo the following lines
 train_control <- trainControl(method = "repeatedcv", number = 2, repeats = 8, summaryFunction = my_summary)
-#I used number of K-folds = 2 since 2*8 = 16, and I have 15 years for data
-length(d_spawn$oage_2)
 
 # train the model Warning messages are okay.
 model <- train(oage_2 ~ spawnerstm4, data = data_cv, trControl=train_control, method="lm")
@@ -205,18 +194,18 @@ print(model)
 #forecast
 pred
 quant
-quant[3,3] <- pred[1]
-quant[3,2] <- pred[2]
-quant[3,4] <- pred[3]
+quant[2,3] <- pred[1]
+quant[2,2] <- pred[2]
+quant[2,4] <- pred[3]
 
 #check it matches worksheet.
-lwr <- sum(quant$lwr90[1:2], quant$lwr90[4])
-est <- sum(quant$est[1:2], quant$est[4])
-upr <- sum(quant$upr90[1:2],  quant$upr90[4])
+(lwr <- sum(quant$lwr90[1], quant$lwr90[3:4]))
+(est <- sum(quant$est[1], quant$est[3:4]))
+(upr <- sum(quant$upr90[1],  quant$upr90[3:4]))
 
-lwr <- sum(quant$lwr90[1:2], pred[2], quant$lwr90[4])
-est <- sum(quant$est[1:2], pred[1], quant$est[4])
-upr <- sum(quant$upr90[1:2], pred[3], quant$upr90[4])
+lwr <- sum(quant$lwr90[1], pred[2], quant$lwr90[3:4])
+est <- sum(quant$est[1], pred[1], quant$est[3:4])
+upr <- sum(quant$upr90[1], pred[3], quant$upr90[3:4])
 
 # forecast ----
 quant %>%
@@ -228,5 +217,5 @@ quant %>%
 bear_f$est
 
 #additional for report ----
-escapement_goal <- 156000
+escapement_goal <- 158000
 (harvest_est <- bear_f$est - escapement_goal )
