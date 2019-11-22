@@ -166,7 +166,7 @@ g.pred <- ggplot(pred.int, aes(x = spawnerstm4, y = fit)) +
   ylab("ocean age 2") #+ #ggtitle("oage_2 vs spawnerstm4")
 g.pred  
 dev.off()
-ggsave(filename = paste0("figures/oage_2_spawnerstm4_all", ".png", sep = ""), device = png(), width = 7, height = 9, units = "in", dpi = 300)
+ggsave(filename = paste0("figures/oage_2_spawnerstm4_2003up", ".png", sep = ""), device = png(), width = 7, height = 9, units = "in", dpi = 300)
 
 #Repeated K- fold Cross validation ----
 
