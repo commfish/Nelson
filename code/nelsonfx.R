@@ -4,20 +4,23 @@
 # date November 2019
 
 # load ----
-library(tidyverse)  
-library(fpp2)
-library(RDS)
-library(ggrepel)
-library(ggpubr)
-library(grid)
+library(tidyverse)  # for data manipulation
+library(fpp2) #for prediction
+library(RDS) #for prediction
+library(ggrepel) #for graphing
+library(ggpubr)#for graphing
+library(grid)#for graphing
 library(broom)#for cleaning up data, used in predction
 library(caret)#used for cross validation 
-library(Metrics)
+library(Metrics)#used for cross validation 
 #source('code/functions.R')
 options(scipen = 999)
 set.seed(100) # for reproducible results
 
 # data ----
+# oage = ocean age = years in the ocean
+#spawnerstm4 spawners that produced that year class.
+#run = the fish that returned  in either the harvest or the escapement for that river system
 data <- read_csv('data/nelson.csv') %>%
   filter(year > 2002) #%>%
 
@@ -123,6 +126,7 @@ my_summary <- function (data, lev = NULL, model = NULL) {
 }
 
 #model 1 ----
+# ocean age 2 fish are regressed on spawners for the ocean age 2 prodgeny.
 lm2s <- lm(oage_2 ~ spawnerstm4 , data = d_spawn)
 summary(lm2s)
 #to annotate the graph need library(grid)
@@ -219,3 +223,4 @@ bear_f$est
 #additional for report ----
 escapement_goal <- 158000
 (harvest_est <- bear_f$est - escapement_goal )
+
