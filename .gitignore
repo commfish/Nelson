@@ -1,0 +1,10 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+
+*.csv
+*.xlsx
+*.xls
+text/2019_Nelson_text.docx
+text/2020_Nelson_textsphf.docx
