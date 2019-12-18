@@ -5,8 +5,8 @@
 
 # load ----
 library(tidyverse)  # for data manipulation
-library(fpp2) #for prediction
-library(RDS) #for prediction
+library(fpp2) #for time series
+library(RDS) #for time series prediction
 library(ggrepel) #for graphing
 library(ggpubr)#for graphing
 library(grid)#for graphing
@@ -24,6 +24,7 @@ set.seed(100) # for reproducible results
 data <- read_csv('data/nelson.csv') %>%
   filter(year > 2002) #%>%
 
+# Only the most recent years should have NAs
 data[!complete.cases(data),]
 tail(data,13)
 
@@ -31,6 +32,7 @@ d_spawn <- data %>%
   filter(year > 2002) %>%
   select(year, spawnerstm4, oage_2)
 
+# Only the most recent years should have NAs
 d_spawn[!complete.cases(d_spawn),] 
 
 (last_yr <- max(data$year, na.rm =TRUE))
@@ -59,12 +61,15 @@ data_l <- data_l %>%
 
 data_l$oage <- as_factor(data_l$oage)
 
-(quant <- data_l %>%
-    group_by(oage) %>%
-    summarize(lwr90 = quantile(tail(fish, 10), c(0.10)), 
-              est = median(tail(fish, 10)),
-              upr90 = quantile(tail(fish, 10), c(.90))))
 
+# median return by size ----
+
+# For ages 1, 3 and 4, use the median from the last 10 years
+(quant <- data_l %>%
+   group_by(oage) %>%
+   summarize(lwr90 = quantile(tail(fish, 10), c(0.10)), 
+             est = median(tail(fish, 10)),
+             upr90 = quantile(tail(fish, 10), c(.90))))
 
 # time series analysis ----
 
@@ -83,14 +88,18 @@ data_ts <- data_ts[complete.cases(data_ts),] %>%
 #autoplot(data_ts)
 #ggAcf(data_ts)
 #ggAcf(diff(data_ts))
+
+# Ran a variety of time series models, checking diagnostics along the way.
+
 #naive (last years value)
 fc <- fcn <- naive(data_ts, h = 1)
 #simple exponential smoothing
 fc <- fcses <- ses(data_ts, h = 1)
 #holt
 fc <- fch <- holt(y = data_ts, h = 1,  exponential = FALSE) 
+
 #holt for the 2020 forecast don't use this method since residuals don't pass the Ljung-Box test.
-fc <- fch <- holt(y = data_ts, h = 1,  exponential = TRUE) 
+fc <- fch <- holt(y = data_ts, h = 1,  exponential = TRUE) # Getting an error
 #damped holt
 #fc <- holt(y = data_ts, h = 1, level = c(80, 80),  damped = TRUE, lambda = "auto") #can specify different Prediction intervals if needed. 
 fc <- holt(y = data_ts, h = 1, damped = TRUE, lambda = "auto") 
@@ -102,13 +111,14 @@ checkresiduals(fc)
 #accuracy(fc)
 autoplot(fc) + autolayer(fitted(fc))
 
-#Checking we have the right number of things also used inspection to check that the most recent values are accurate. 
+#Checking we have the right number of things also used inspection to check that
+#the most recent values are accurate.
 length(fitted(fc))
-length(even)
 
-#For the 2020 forecast The model with the smalles RMSE and MAPE is either the SES with alpha = .9999 which is virtually 
-#the Naive estimate: Just use last years value.
-#The following has an even smaller RMSE, especially cross validated. 
+#For the 2020 forecast the model with the smallest RMSE and MAPE is either the
+#SES with alpha = .9999 which is virtually the Naive estimate: Just use last
+#years value. The following has an even smaller RMSE, especially cross
+#validated.
 
 # analysis ----
 
@@ -174,10 +184,11 @@ ggsave(filename = paste0("figures/oage_2_spawnerstm4_2003up", ".png", sep = ""),
 
 #Repeated K- fold Cross validation ----
 
-#check missing values There should be some for the older ages since those fish haven't returned yet
+# there should be no NAs
 d_spawn[!complete.cases(d_spawn),]
 
-#IF only the most recent years for age classes are missing remove them.   ... other wise figure out why they are missing!
+#IF only the most recent years for age classes are missing remove them.   ...
+#other wise figure out why they are missing!
 data_cv <- data %>%
   select(spawnerstm4, oage_2) %>%
   na.omit()  #can't have NA's for cross validation.
@@ -192,10 +203,7 @@ model <- train(oage_2 ~ spawnerstm4, data = data_cv, trControl=train_control, me
 # summarize result
 print(model)
 
-# median return by size ----
-
-
-#forecast
+#forecast summary ----
 pred
 quant
 quant[2,3] <- pred[1]
@@ -211,16 +219,15 @@ lwr <- sum(quant$lwr90[1], pred[2], quant$lwr90[3:4])
 est <- sum(quant$est[1], pred[1], quant$est[3:4])
 upr <- sum(quant$upr90[1], pred[3], quant$upr90[3:4])
 
-# forecast ----
 quant %>%
   summarize(lwr = sum(lwr),
             est = sum(est),
-            upr = sum(upr))
+            upr = sum(upr)) 
 
-(bear_f <- data.frame(est, lwr, upr))
-bear_f$est
+(nelson_f <- data.frame(est, lwr, upr))
+nelson_f$est
 
 #additional for report ----
 escapement_goal <- 158000
-(harvest_est <- bear_f$est - escapement_goal )
+(harvest_est <- nelson_f$est - escapement_goal )
 
